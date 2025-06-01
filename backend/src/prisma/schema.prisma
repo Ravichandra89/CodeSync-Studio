@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * User Schema - Stores registered users (developers) and their basic profile/auth credentials.
+ */
+
+model User {
+  id           String  @id @default(uuid())
+  email        String  @unique
+  name         String?
+  passwordHash String
+  provider     String
+  avatarUrl    String? // S3 Url as String - Optional
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations 
+  project  Project[]
+  sessions Session[]
+}
+
+/**
+ * Project Model Schema - Groups multiple files/sessions under one “workspace.” A        developer might have multiple projects (e.g., “Landing Page Prototype,” “Admin Dashboard Clone”).
+ */
+
+model Project {
+  id          String @id @default(uuid())
+  userId      String
+  name        String
+  description String
+  visibility  String  // Public / Private
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // UserId Relationship
+  user User @relation(fields: [userId], references: [id])
+
+  file File[]
+  sessions Session[]
+}
+
+
