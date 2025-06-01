@@ -7,45 +7,108 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/**
- * User Schema - Stores registered users (developers) and their basic profile/auth credentials.
- */
-
 model User {
-  id           String  @id @default(uuid())
-  email        String  @unique
+  id           String   @id @default(uuid())
+  email        String   @unique
   name         String?
   passwordHash String
   provider     String
-  avatarUrl    String? // S3 Url as String - Optional
+  avatarUrl    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations 
-  project  Project[]
-  sessions Session[]
+  project   Project[]
+  sessions  Session[]
 }
-
-/**
- * Project Model Schema - Groups multiple files/sessions under one “workspace.” A        developer might have multiple projects (e.g., “Landing Page Prototype,” “Admin Dashboard Clone”).
- */
 
 model Project {
-  id          String @id @default(uuid())
+  id          String   @id @default(uuid())
   userId      String
   name        String
-  description String
-  visibility  String  // Public / Private
+  description String?
+  visibility  String
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // UserId Relationship
-  user User @relation(fields: [userId], references: [id])
-
-  file File[]
+  user     User     @relation(fields: [userId], references: [id])
+  file     File[]
   sessions Session[]
 }
 
+model File {
+  id           String   @id @default(uuid())
+  projectId    String
+  fileName     String
+  language     String
+  originalCode String
+  currentCode  String
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   Project  @relation(fields: [projectId], references: [id])
+  sessions  Session[]
+}
+
+model Session {
+  id                 String   @id @default(uuid())
+  userId             String
+  projectId          String
+  fileId             String
+
+  title              String?
+  promptText         String
+  inputCodeSnapshot  String
+  outputCodeSnapshot String
+  modelUsed          String
+  status             String   @default("pending")
+  errorMessage       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versionHistory VersionHistory[]
+  llmLogs        LLMLog[]
+
+  user     User    @relation(fields: [userId], references: [id])
+  project  Project @relation(fields: [projectId], references: [id])
+  file     File    @relation(fields: [fileId], references: [id])
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([fileId])
+}
+
+model VersionHistory {
+  id            String   @id @default(uuid())
+  sessionId     String
+  session       Session  @relation(fields: [sessionId], references: [id])
+
+  versionNumber Int
+  changeType    String
+  beforeCode    String
+  afterCode     String
+
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+}
+
+model LLMLog {
+  id               String   @id @default(uuid())
+  sessionId        String
+  session          Session  @relation(fields: [sessionId], references: [id])
+
+  modelUsed        String
+  tokensPrompt     Int
+  tokensCompletion Int
+  latency          Int?
+  statusCode       Int
+  errorMessage     String?
+
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+}
